@@ -828,25 +828,25 @@ ROM_START( mhavocpex7 )
 	/* Alpha Processor ROMs */
 	ROM_REGION( 0x40000, REGION_CPU1, 0 )
 	/* Vector ROM */
-	ROM_LOAD( "mhavocpex7.6kl",  0x05000, 0x2000, CRC(ef7843f8) SHA1(bfd096b0db69188f9032578839c9bd91367f7aae) )
+	ROM_LOAD( "mhavocpex7.6kl",  0x05000, 0x2000, CRC(176510e5) SHA1(602a7a8141b1dc4df871f98128486dd07b392a74) )
 
 	/* Program ROM */
-	ROM_LOAD( "mhavocpex7.1mn",  0x08000, 0x4000, CRC(f043dcaf) SHA1(3f20c20ea601190a52dac50d3281ed09a18a4948) )
-	ROM_LOAD( "mhavocpex7.1l",   0x0c000, 0x4000, CRC(da963eab) SHA1(b10872898b12d79cd6cf0651ec61962315b5aff9) )
+	ROM_LOAD( "mhavocpex7.1mn",  0x08000, 0x4000, CRC(25e9e605) SHA1(54475f0ca926ebb678718ee9908199401b8bfe4e) )
+	ROM_LOAD( "mhavocpex7.1l",   0x0c000, 0x4000, CRC(303133f4) SHA1(ef3852f7afbc913d6dc0ccf770aa331c0e69dc70) )
 
 	/* Paged Program ROM - switched to 2000-3fff */
-	ROM_LOAD( "mhavocpex7.1q",   0x30000, 0x8000, CRC(57499813) SHA1(ff53f65fc34c5f4b8d4af78776fb242ac59d536a) )	
-	ROM_LOAD( "mhavocpex7.1np",  0x38000, 0x8000, CRC(0d362096) SHA1(dccc0509aac7003fee11bf7eeabff81360c226a8) )
+	ROM_LOAD( "mhavocpex7.1q",   0x30000, 0x8000, CRC(85bd5ffa) SHA1(e0ec0a3bd0cc6e5e62bc54e1f8d01dcb3bdd5977) )	
+	ROM_LOAD( "mhavocpex7.1np",  0x38000, 0x8000, CRC(aa4ce2a4) SHA1(fcb8bb557c55390c08fb2ef24c81710cc9d0e285) )
 	
 	/* Paged Vector Generator ROM */	
-	ROM_LOAD( "mhavocpex7.6h",   0x18000, 0x4000, CRC(4129d0e9) SHA1(6fd168de59d684f216a0a0ac45aed0782b18f900) )
-	ROM_LOAD( "mhavocpex7.6jk",  0x1c000, 0x4000, CRC(9361ed01) SHA1(ea07f8430f7e97e0c62d8df2963bb7b66a45b698) )
+	ROM_LOAD( "mhavocpex7.6h",   0x18000, 0x4000, CRC(a243aa0f) SHA1(20a6f4f1e57180cd956c0a9602fd7f8c160fcf13) )
+	ROM_LOAD( "mhavocpex7.6jk",  0x1c000, 0x4000, CRC(700b97e7) SHA1(abe09a1f3f68f3c264d614a133dbb1c18f3dc02a) )
 	/* the last 0x1000 is used for the 2 RAM pages */
 
 
 	/* Gamma Processor ROM */
 	ROM_REGION( 0x10000, REGION_CPU2, 0 )
-	ROM_LOAD( "mhavocpex7.9s",   0x8000, 0x4000, CRC(9703c51f) SHA1(c010021e0dabc568af2eb1d516726ac21a1c9c98) )
+	ROM_LOAD( "mhavocpex7.9s",   0x8000, 0x4000, CRC(4645a047) SHA1(d84b577049f71c8a6b7691c37eedf6368915614a) )
 	ROM_RELOAD(                  0x0c000, 0x4000 ) /* reset+interrupt vectors */
 
 	ROM_REGION( 0x40000, REGION_SOUND1, 0 )	

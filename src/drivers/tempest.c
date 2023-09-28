@@ -543,6 +543,20 @@ ROM_START( temptube )
 ROM_END
 
 
+
+ROM_START( vbrakout )
+	ROM_REGION( 0x10000, REGION_CPU1, 0 )	/* 64k for code */
+	ROM_LOAD( "vbrakout.113",   0x9000, 0x0800, CRC(6fd3efe5) SHA1(d195d08984ad8797607bc1989e8a606d51547c68) )
+	ROM_LOAD( "vbrakout.114",   0x9800, 0x0800, CRC(9974b9a5) SHA1(6ecc6f72070895bb15992977348f58835233911f) )
+	ROM_LOAD( "vbrakout.115",   0xa000, 0x0800, CRC(44d611d8) SHA1(82cd63fc9067ea1f00feeffbee66e7d750cab7e5) )
+	ROM_LOAD( "vbrakout.116",   0xa800, 0x0800, CRC(cd58fc11) SHA1(060e31e55183ccef67a1adc91fb48c22424a4ba5) )
+	ROM_LOAD( "vbrakout.122",   0xd800, 0x0800, CRC(1ae2dd53) SHA1(b908ba6b59195aea853380a56a243aa8fa2fba71) )
+	ROM_RELOAD(              0xf800, 0x0800 ) /* for reset/interrupt vectors */
+	/* Math Box ROM */
+	ROM_LOAD( "136002-123.np3",  0x3000, 0x0800, CRC(29f7e937) SHA1(686c8b9b8901262e743497cee7f2f7dd5cb3af7e) ) /* May be labeled "136002-111", same data */
+	ROM_LOAD( "136002-124.r3",   0x3800, 0x0800, CRC(c16ec351) SHA1(a30a3662c740810c0f20e3712679606921b8ca06) ) /* May be labeled "136002-112", same data */
+ROM_END
+
 #if 0 /* identical to rom_tempest, only different rom sizes */
 ROM_START( tempest3 )
 	ROM_REGION( 0x10000, REGION_CPU1, 0 )	/* 64k for code */
@@ -570,3 +584,4 @@ GAME( 1980, tempest1, tempest, tempest, tempest, 0, ROT270, "Atari", "Tempest (r
 GAME( 1980, tempest2, tempest, tempest, tempest, 0, ROT270, "Atari", "Tempest (rev 2)", 0 )
 GAME( 1980, tempest3, tempest, tempest, tempest, 0, ROT270, "Atari", "Tempest (rev ?)", 0 )
 GAME( 1980, temptube, tempest, tempest, tempest, 0, ROT270, "hack", "Tempest Tubes", 0 )
+GAME( 1999, vbrakout, tempest, tempest, tempest, 0, ROT270, "hack", "Vector Breakout", 0 )

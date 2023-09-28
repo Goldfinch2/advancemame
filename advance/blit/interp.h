@@ -72,6 +72,7 @@ extern unsigned interp_highnot_mask;
 		       | INTERP_16_UNMASK_2((INTERP_16_MASK_2(p1) * a + INTERP_16_MASK_2(p2) * b) / 16); \
 	}
 
+
 #define INTERP_16_GEN3(a, b, c) \
 	static inline interp_uint16 interp_16_ ## a ## b ## c(interp_uint16 p1, interp_uint16 p2, interp_uint16 p3) \
 	{ \
@@ -491,7 +492,7 @@ int interp_yuy2_dist(interp_uint32 p1, interp_uint32 p2);
  */
 static int interp_16_dist3(interp_uint16 p1, interp_uint16 p2, interp_uint16 p3)
 {
-	return interp_16_dist(p1, p2) + interp_16_dist(p2, p3);
+	return 0;
 }
 
 static inline int interp_32_dist3(interp_uint32 p1, interp_uint32 p2, interp_uint32 p3)

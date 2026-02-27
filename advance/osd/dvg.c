@@ -72,7 +72,7 @@
 #define DVG_RES_MAX              4095
 
 #define SAVE_TO_FILE             0
-#define SORT_VECTORS             0
+static uint32_t  s_sort_vectors = 0;
 #define MAX_VECTORS              0x10000
 
 // Defining region codes 
@@ -105,7 +105,6 @@ typedef struct {
 
 static uint32_t  s_exclude_blank_vectors;
 static uint32_t  s_init;
-static int       s_dual_display;
 static int32_t   s_serial_fd = -1;
 static int32_t   s_xmin, s_xmax, s_ymin, s_ymax;
 static float     s_xscale, s_yscale;
@@ -290,77 +289,193 @@ uint32_t line_clip(int32_t *pX1, int32_t *pY1, int32_t *pX2, int32_t *pY2)
 
 //
 // Sort, optimize and add vectors (and blank vectors) to the output vector list.
-// 
+//
+// 1. Detect connected chains: consecutive vectors where endpoint == next start.
+// 2. Assign each chain to a grid cell based on its first vector's midpoint.
+// 3. Traverse the grid in a snake pattern (stable frame-to-frame order).
+// 4. Within each cell, pick chains by nearest-neighbor.
+// 5. Emit each chain's vectors in order, preserving connectivity.
+//
+#define GRID_COLS 8
+#define GRID_ROWS 8
+#define NUM_CELLS (GRID_COLS * GRID_ROWS)
+
+typedef struct {
+    uint16_t start;     // first vector index in s_in_vec_list
+    uint16_t count;     // number of vectors in the chain
+    int32_t  x0, y0;   // start point (for nearest-neighbor matching)
+    int32_t  x1, y1;   // end point
+} chain_t;
+
+static chain_t  s_chains[MAX_VECTORS];
+static uint16_t s_chainCnt;
+static uint16_t s_cellCnt[NUM_CELLS];
+static uint16_t s_cellOffset[NUM_CELLS];
+static uint16_t s_cellBins[MAX_VECTORS];  // chain indices per cell
+static uint8_t  s_sortUsed[MAX_VECTORS];
+
 void sort_and_reconnect_vectors()
 {
-    int32_t  dmin;
-    uint32_t reverse;
-    int32_t  last_x = -1;
-    int32_t  last_y = -1;
-    int32_t  x0, y0, x1, y1, dx0, dy0, dx1, dy1, d0, d1;
-    vector_t **min_v, *head, *s;
+    uint32_t i;
+    int32_t  last_x = 0, last_y = 0;
+    int32_t  row, col, cell;
 
-    head = &s_in_vec_list[0];
     s_out_vec_cnt = 0;
 
-    while (head) {
-        min_v = &head;
-        reverse = 0;
-        dmin = INT32_MAX;
-	vector_t **v;
-        for (v = min_v; *v; v = &(*v)->next) {
-            dx0 = (*v)->x0 - last_x;
-            dy0 = (*v)->y0 - last_y;
-            dx1 = (*v)->x1 - last_x;
-            dy1 = (*v)->y1 - last_y;
-            d0 = (int32_t)sqrt((dx0 * dx0) + (dy0 * dy0));
-            d1 = (int32_t)sqrt((dx1 * dx1) + (dy1 * dy1));
-            if (d0 < dmin) {
-                min_v = v;
-                dmin = d0;
-                reverse = 0;
-            }
-            if (d1 < dmin) {
-                min_v = v;
-                dmin = d1;
-                reverse = 1;
-            }
-            if (dmin == 0) {
-                break;
+    if (s_in_vec_cnt <= 1) {
+        reconnect_vectors();
+        return;
+    }
+
+    // Pass 1: detect connected chains
+    s_chainCnt = 0;
+    s_chains[0].start = 0;
+    s_chains[0].count = 1;
+    s_chains[0].x0 = s_in_vec_list[0].x0;
+    s_chains[0].y0 = s_in_vec_list[0].y0;
+
+    for (i = 1; i < s_in_vec_cnt; i++) {
+        if (s_in_vec_list[i].x0 == s_in_vec_list[i - 1].x1 &&
+            s_in_vec_list[i].y0 == s_in_vec_list[i - 1].y1) {
+            // Connected — extend current chain
+            s_chains[s_chainCnt].count++;
+        } else {
+            // Disconnect — finalize current chain, start new one
+            s_chains[s_chainCnt].x1 = s_in_vec_list[i - 1].x1;
+            s_chains[s_chainCnt].y1 = s_in_vec_list[i - 1].y1;
+            s_chainCnt++;
+            s_chains[s_chainCnt].start = (uint16_t)i;
+            s_chains[s_chainCnt].count = 1;
+            s_chains[s_chainCnt].x0 = s_in_vec_list[i].x0;
+            s_chains[s_chainCnt].y0 = s_in_vec_list[i].y0;
+        }
+    }
+    // Finalize last chain
+    s_chains[s_chainCnt].x1 = s_in_vec_list[s_in_vec_cnt - 1].x1;
+    s_chains[s_chainCnt].y1 = s_in_vec_list[s_in_vec_cnt - 1].y1;
+    s_chainCnt++;
+
+    // Pass 2: assign each chain to a grid cell based on its start midpoint
+    memset(s_cellCnt, 0, sizeof(s_cellCnt));
+    for (i = 0; i < s_chainCnt; i++) {
+        int32_t mx = (s_chains[i].x0 + s_chains[i].x1) / 2;
+        int32_t my = (s_chains[i].y0 + s_chains[i].y1) / 2;
+        col = mx * GRID_COLS / (DVG_RES_MAX + 1);
+        row = my * GRID_ROWS / (DVG_RES_MAX + 1);
+        if (col < 0) col = 0;
+        if (col >= GRID_COLS) col = GRID_COLS - 1;
+        if (row < 0) row = 0;
+        if (row >= GRID_ROWS) row = GRID_ROWS - 1;
+        s_sortUsed[i] = (uint8_t)(row * GRID_COLS + col);
+        s_cellCnt[row * GRID_COLS + col]++;
+    }
+
+    s_cellOffset[0] = 0;
+    for (i = 1; i < NUM_CELLS; i++)
+        s_cellOffset[i] = s_cellOffset[i - 1] + s_cellCnt[i - 1];
+
+    memset(s_cellCnt, 0, sizeof(s_cellCnt));
+    for (i = 0; i < s_chainCnt; i++) {
+        uint8_t c = s_sortUsed[i];
+        s_cellBins[s_cellOffset[c] + s_cellCnt[c]++] = (uint16_t)i;
+    }
+
+    memset(s_sortUsed, 0, s_chainCnt);
+
+    // Pass 3: traverse grid in snake pattern, nearest-neighbor on chains
+    for (row = 0; row < GRID_ROWS; row++) {
+        for (i = 0; i < (uint32_t)GRID_COLS; i++) {
+            uint16_t *bin;
+            uint16_t cnt, remaining;
+
+            col = (row & 1) ? (GRID_COLS - 1 - i) : i;
+            cell = row * GRID_COLS + col;
+            cnt = s_cellCnt[cell];
+            if (cnt == 0) continue;
+            bin = &s_cellBins[s_cellOffset[cell]];
+
+            remaining = cnt;
+            while (remaining > 0) {
+                int64_t dmin = INT64_MAX;
+                uint16_t bestIdx = 0;
+                uint32_t bestReverse = 0;
+                uint16_t j;
+                chain_t *ch;
+                int32_t cx0, cy0, cx1, cy1;
+
+                // Find nearest chain
+                for (j = 0; j < cnt; j++) {
+                    int64_t dx0, dy0, dx1, dy1, d0, d1;
+                    if (s_sortUsed[bin[j]]) continue;
+                    ch = &s_chains[bin[j]];
+                    dx0 = (int64_t)(ch->x0 - last_x);
+                    dy0 = (int64_t)(ch->y0 - last_y);
+                    dx1 = (int64_t)(ch->x1 - last_x);
+                    dy1 = (int64_t)(ch->y1 - last_y);
+                    d0 = dx0 * dx0 + dy0 * dy0;
+                    d1 = dx1 * dx1 + dy1 * dy1;
+                    if (d0 < dmin) { bestIdx = j; dmin = d0; bestReverse = 0; }
+                    if (d1 < dmin) { bestIdx = j; dmin = d1; bestReverse = 1; }
+                    if (dmin == 0) break;
+                }
+
+                s_sortUsed[bin[bestIdx]] = 1;
+                remaining--;
+                ch = &s_chains[bin[bestIdx]];
+
+                if (bestReverse) {
+                    cx0 = ch->x1; cy0 = ch->y1;
+                    cx1 = ch->x0; cy1 = ch->y0;
+                } else {
+                    cx0 = ch->x0; cy0 = ch->y0;
+                    cx1 = ch->x1; cy1 = ch->y1;
+                }
+
+                // Insert blank to reach chain start
+                if (last_x != cx0 || last_y != cy0) {
+                    s_out_vec_list[s_out_vec_cnt].x0 = last_x;
+                    s_out_vec_list[s_out_vec_cnt].y0 = last_y;
+                    s_out_vec_list[s_out_vec_cnt].x1 = cx0;
+                    s_out_vec_list[s_out_vec_cnt].y1 = cy0;
+                    s_out_vec_list[s_out_vec_cnt].r = 0;
+                    s_out_vec_list[s_out_vec_cnt].g = 0;
+                    s_out_vec_list[s_out_vec_cnt].b = 0;
+                    s_out_vec_cnt++;
+                }
+
+                // Emit chain vectors in order (or reversed)
+                if (bestReverse) {
+                    int32_t k;
+                    for (k = ch->start + ch->count - 1; k >= (int32_t)ch->start; k--) {
+                        vector_t *src = &s_in_vec_list[k];
+                        s_out_vec_list[s_out_vec_cnt].x0 = src->x1;
+                        s_out_vec_list[s_out_vec_cnt].y0 = src->y1;
+                        s_out_vec_list[s_out_vec_cnt].x1 = src->x0;
+                        s_out_vec_list[s_out_vec_cnt].y1 = src->y0;
+                        s_out_vec_list[s_out_vec_cnt].r = src->r;
+                        s_out_vec_list[s_out_vec_cnt].g = src->g;
+                        s_out_vec_list[s_out_vec_cnt].b = src->b;
+                        s_out_vec_cnt++;
+                    }
+                } else {
+                    uint32_t k;
+                    for (k = ch->start; k < (uint32_t)(ch->start + ch->count); k++) {
+                        vector_t *src = &s_in_vec_list[k];
+                        s_out_vec_list[s_out_vec_cnt].x0 = src->x0;
+                        s_out_vec_list[s_out_vec_cnt].y0 = src->y0;
+                        s_out_vec_list[s_out_vec_cnt].x1 = src->x1;
+                        s_out_vec_list[s_out_vec_cnt].y1 = src->y1;
+                        s_out_vec_list[s_out_vec_cnt].r = src->r;
+                        s_out_vec_list[s_out_vec_cnt].g = src->g;
+                        s_out_vec_list[s_out_vec_cnt].b = src->b;
+                        s_out_vec_cnt++;
+                    }
+                }
+
+                last_x = (bestReverse ? cx1 : cx1);
+                last_y = (bestReverse ? cy1 : cy1);
             }
         }
-        s = *min_v;
-        if (!s) {
-            break;
-        }
-
-        x0 = reverse ? s->x1 : s->x0;
-        y0 = reverse ? s->y1 : s->y0;
-        x1 = reverse ? s->x0 : s->x1;
-        y1 = reverse ? s->y0 : s->y1;
-
-        if (last_x != x0 || last_y != y0) {
-            s_out_vec_list[s_out_vec_cnt].x0 = last_x;
-            s_out_vec_list[s_out_vec_cnt].y0 = last_y;
-            s_out_vec_list[s_out_vec_cnt].x1 = x0;
-            s_out_vec_list[s_out_vec_cnt].y1 = y0;
-            s_out_vec_list[s_out_vec_cnt].r = 0;
-            s_out_vec_list[s_out_vec_cnt].g = 0;
-            s_out_vec_list[s_out_vec_cnt].b = 0;
-            s_out_vec_cnt++;
-        }
-
-        s_out_vec_list[s_out_vec_cnt].x0 = last_x;
-        s_out_vec_list[s_out_vec_cnt].y0 = last_y;
-        s_out_vec_list[s_out_vec_cnt].x1 = x1;
-        s_out_vec_list[s_out_vec_cnt].y1 = y1;
-        s_out_vec_list[s_out_vec_cnt].r = s->r;
-        s_out_vec_list[s_out_vec_cnt].g = s->g;
-        s_out_vec_list[s_out_vec_cnt].b = s->b;
-        s_out_vec_cnt++;
-        last_x = x1;
-        last_y = y1;
-        *min_v = s->next;
     }
 }
 
@@ -425,22 +540,13 @@ static void recalc_gamma_table(float _gamma)
 //
 // Reset the indexes to the vector list and command buffer.
 //
-static void cmd_reset(uint32_t initial)
+static void cmd_reset()
 {
-    uint32_t i, cnt;
     s_in_vec_last_x  = 0;
     s_in_vec_last_y  = 0;
     s_in_vec_cnt     = 0;
     s_out_vec_cnt    = 0;
-    s_cmd_offs         = 0;
-   // Special sync pattern
-   cnt = 8;
-   if (initial) {
-      cnt = 512;
-   }
-   for (i = 0 ; i < cnt ; i++) {
-      s_cmd_buf[s_cmd_offs++] = 0xc0 | (i & 0x3);
-   }
+    s_cmd_offs       = 0;
 }
 
 //
@@ -565,7 +671,17 @@ static int serial_open()
     res = SetCommState((HANDLE)s_serial_fd, &dcb);
     if (res == FALSE) {
         log_std(("dvg: SetCommState(%s) failed. (%ld) \n", s_serial_dev, GetLastError()));
-        goto END;       
+        goto END;
+    }
+    {
+        COMMTIMEOUTS timeouts;
+        memset(&timeouts, 0, sizeof(timeouts));
+        timeouts.ReadIntervalTimeout = 50;
+        timeouts.ReadTotalTimeoutMultiplier = 10;
+        timeouts.ReadTotalTimeoutConstant = 2000;
+        timeouts.WriteTotalTimeoutMultiplier = 10;
+        timeouts.WriteTotalTimeoutConstant = 2000;
+        SetCommTimeouts((HANDLE)s_serial_fd, &timeouts);
     }
 #endif
 
@@ -594,7 +710,7 @@ static int serial_open()
     result = 0;
 #endif
 END:
-    cmd_reset(1);
+    cmd_reset();
     s_last_r = s_last_g = s_last_b = -1;
     return result;
 }
@@ -607,7 +723,7 @@ static int serial_read(void *buf, uint32_t size)
     int result = -1;
 #ifdef __WIN32__
     DWORD read;
-    if (ReadFile(s_serial_fd, buf, size, &read, NULL))
+    if (ReadFile(s_serial_fd, buf, size, &read, NULL) && read == size)
     {
         result = read;
     }
@@ -679,6 +795,46 @@ END:
 }
 
 
+#define DVG_SORT_STATS 0
+
+#if DVG_SORT_STATS
+// Measure total blank distance for a vector list
+static void count_blank_stats(const vector_t *list, uint32_t cnt, uint32_t *out_blanks, uint64_t *out_dist)
+{
+    uint32_t blanks = 0;
+    uint64_t dist = 0;
+    uint32_t i;
+    for (i = 0; i < cnt; i++) {
+        if (list[i].r == 0 && list[i].g == 0 && list[i].b == 0) {
+            int64_t dx = (int64_t)list[i].x1 - (int64_t)list[i].x0;
+            int64_t dy = (int64_t)list[i].y1 - (int64_t)list[i].y0;
+            blanks++;
+            dist += (uint64_t)sqrt((double)(dx * dx + dy * dy));
+        }
+    }
+    *out_blanks = blanks;
+    *out_dist = dist;
+}
+
+static double get_time_us(void)
+{
+#ifdef __WIN32__
+    LARGE_INTEGER freq, cnt;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&cnt);
+    return (double)cnt.QuadPart * 1000000.0 / (double)freq.QuadPart;
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (double)tv.tv_sec * 1000000.0 + (double)tv.tv_usec;
+#endif
+}
+
+static uint32_t s_statsFrameCount = 0;
+static double s_sortTimeAccum = 0.0;
+static double s_sortTimeMax = 0.0;
+#endif
+
 //
 // Preprocess and send commands to USB-DVG over the virtual serial port.
 //
@@ -688,17 +844,57 @@ static int serial_send()
     uint32_t cmd;
 
     if (s_serial_fd < 0) {
-        log_std(("dvg: device not opened.\n"));            
+        log_std(("dvg: device not opened.\n"));
         goto END;
     }
 
-    #if SORT_VECTORS
-        // USB-DVG has difficulties rendering sorted vectors.  The screen (especially text) wobbles.
-        // I have yet to know why it does that.  Otherwise the algorithm works fine.
+    if (s_sort_vectors) {
+#if DVG_SORT_STATS
+        {
+            double t0, t1, elapsed;
+
+            // Run unsorted first to count baseline
+            reconnect_vectors();
+            {
+                uint32_t unsortedBlanks;
+                uint64_t unsortedDist;
+                count_blank_stats(s_out_vec_list, s_out_vec_cnt, &unsortedBlanks, &unsortedDist);
+
+                t0 = get_time_us();
+                sort_and_reconnect_vectors();
+                t1 = get_time_us();
+                elapsed = t1 - t0;
+
+                {
+                    uint32_t sortedBlanks;
+                    uint64_t sortedDist;
+                    count_blank_stats(s_out_vec_list, s_out_vec_cnt, &sortedBlanks, &sortedDist);
+
+                    s_sortTimeAccum += elapsed;
+                    if (elapsed > s_sortTimeMax)
+                        s_sortTimeMax = elapsed;
+
+                    s_statsFrameCount++;
+                    if ((s_statsFrameCount % 120) == 0) {
+                        double avgUs = s_sortTimeAccum / 120.0;
+                        log_std(("dvg: sort stats: %u vecs, %u chains, saved %d blanks, dist %llu -> %llu (%d%%), sort %.0f us avg, %.0f us max\n",
+                            s_in_vec_cnt, s_chainCnt,
+                            (int)unsortedBlanks - (int)sortedBlanks,
+                            (unsigned long long)unsortedDist, (unsigned long long)sortedDist,
+                            unsortedDist > 0 ? (int)(100 - sortedDist * 100 / unsortedDist) : 0,
+                            avgUs, s_sortTimeMax));
+                        s_sortTimeAccum = 0.0;
+                        s_sortTimeMax = 0.0;
+                    }
+                }
+            }
+        }
+#else
         sort_and_reconnect_vectors();
-    #else
+#endif
+    } else {
         reconnect_vectors();
-    #endif
+    }
 
     uint32_t i;
     for (i = 0 ; i < s_out_vec_cnt ; i++) {
@@ -715,7 +911,7 @@ static int serial_send()
 
     result  = serial_write(s_cmd_buf, s_cmd_offs);
 END:
-    cmd_reset(0);
+    cmd_reset();
     return result;
 }
 
@@ -1095,7 +1291,7 @@ int dvg_update(point *p, int num_points)
         serial_send();
     }
 END:    
-    return s_dual_display;        
+    return 0;
 }
 
 
@@ -1110,6 +1306,28 @@ static void get_dvg_info()
     if (s_json_length) {
         return;
     }
+
+    // Send 16 COMPLETE frames to drain firmware's measure_fps counter.
+    // After a previous EXIT, the firmware expects 16 COMPLETEs before
+    // it will process FLAG_CMD commands (like GET_DVG_INFO).
+    {
+        uint32_t complete = FLAG_COMPLETE << 29;
+        uint8_t drain_buf[4 * 16];
+        int i;
+        for (i = 0; i < 16; i++) {
+            drain_buf[i * 4 + 0] = (uint8_t)(complete >> 24);
+            drain_buf[i * 4 + 1] = (uint8_t)(complete >> 16);
+            drain_buf[i * 4 + 2] = (uint8_t)(complete >>  8);
+            drain_buf[i * 4 + 3] = (uint8_t)(complete >>  0);
+        }
+        serial_write(drain_buf, sizeof(drain_buf));
+#ifdef __WIN32__
+        Sleep(100);
+#else
+        usleep(100000);
+#endif
+    }
+
     cmd = (FLAG_CMD << 29) | FLAG_CMD_GET_DVG_INFO;
     sscanf(ADV_VERSION, "%u.%u", &major, &minor);
     version = ((major & 0xf) << 12) | ((minor & 0xf) << 8) | (DVG_RELEASE << 4) | (DVG_BUILD);
@@ -1178,16 +1396,16 @@ END:
 //
 // Init function
 //
-int dvg_init(const char *dvg_port, int dual_display)
+int dvg_init(const char *dvg_port, int sort_vectors)
 {
     s_init = 1;
-    s_dual_display = dual_display;
+    s_sort_vectors = sort_vectors;
     s_cmd_buf = (uint8_t *)malloc(CMD_BUF_SIZE * sizeof(uint8_t));
     s_in_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     s_out_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     strncpy(s_serial_dev, dvg_port, sizeof(s_serial_dev) - 1);
     s_serial_dev[sizeof(s_serial_dev) - 1] = 0;
-    log_std(("dvg: port is %s\n", s_serial_dev));
+    log_std(("dvg: port is %s, sort_vectors %d\n", s_serial_dev, s_sort_vectors));
     return 0;
 }
 

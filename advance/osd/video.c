@@ -1538,8 +1538,8 @@ adv_error advance_video_init(struct advance_video_context* context, adv_conf* cf
 	conf_string_register_default(cfg_context, "display_aspect", "auto");
 
 	conf_string_register_default(cfg_context, "vector_aux_renderer", "none");
-	conf_bool_register_default(cfg_context,   "vector_aux_renderer_dual_display", 1);
 	conf_string_register_default(cfg_context, "vector_aux_renderer_port", "/dev/ttyACM0");
+	conf_bool_register_default(cfg_context,   "vector_aux_renderer_sort_vectors", 0);
 
 #ifdef USE_SMP
 	/* SMP always enabled by default */
@@ -1719,7 +1719,7 @@ adv_error advance_video_config_load(struct advance_video_context* context, adv_c
 	const char* s;
 	adv_error err;
 	int i;
-	adv_bool ror, rol, flipx, flipy, vector_dual_display;
+	adv_bool ror, rol, flipx, flipy;
 	double d;
 
 	context->config.debug_flag = option->debug_flag;
@@ -1749,9 +1749,9 @@ adv_error advance_video_config_load(struct advance_video_context* context, adv_c
 #ifndef __MSDOS__
         s = conf_string_get_default(cfg_context, "vector_aux_renderer");
 	if (strcmp(s, "dvg") == 0) {
-		vector_dual_display = conf_bool_get_default(cfg_context, "vector_aux_renderer_dual_display");
+		int sort_vectors = conf_bool_get_default(cfg_context, "vector_aux_renderer_sort_vectors");
 		s = conf_string_get_default(cfg_context, "vector_aux_renderer_port");
-		dvg_init(s, vector_dual_display);
+		dvg_init(s, sort_vectors);
 	}
 #endif
 

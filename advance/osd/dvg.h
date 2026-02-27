@@ -30,7 +30,7 @@
 #ifndef DVG_H
 #define DVG_H
 
-int dvg_init(const char *dvg_port, int dual_display);
+int dvg_init(const char *dvg_port, int sort_vectors);
 int dvg_open(void);
 void dvg_close(void);
 

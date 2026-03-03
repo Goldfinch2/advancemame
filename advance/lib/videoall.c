@@ -33,6 +33,7 @@
 #include "videoall.h"
 #include "video.h"
 #include "snstring.h"
+#include "target.h"
 
 /**
  * Register all the video drivers.
@@ -61,7 +62,9 @@ void video_reg_driver_all(adv_conf* context)
 	video_reg_driver(context, &video_svgawin_driver);
 #endif
 #ifdef USE_VIDEO_FB
-	video_reg_driver(context, &video_fb_driver);
+	/* Skip FB driver when headless (kmsdrm) to avoid conflicting with SDL overlay */
+	if (target_wm())
+		video_reg_driver(context, &video_fb_driver);
 #endif
 #ifdef USE_VIDEO_VBELINE
 	video_reg_driver(context, &video_vbeline_driver);

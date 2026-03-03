@@ -314,6 +314,7 @@ static uint16_t s_cellOffset[NUM_CELLS];
 static uint16_t s_cellBins[MAX_VECTORS];  // chain indices per cell
 static uint8_t  s_sortUsed[MAX_VECTORS];
 
+static void reconnect_vectors(void);
 void sort_and_reconnect_vectors()
 {
     uint32_t i;
@@ -483,7 +484,7 @@ void sort_and_reconnect_vectors()
 //
 // Add vectors (and blank vectors) to the output vector list.
 // 
-void reconnect_vectors()
+static void reconnect_vectors(void)
 {
     int32_t  last_x = 0;
     int32_t  last_y = 0;

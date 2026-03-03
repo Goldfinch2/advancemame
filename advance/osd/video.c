@@ -1885,6 +1885,11 @@ adv_error advance_video_config_load(struct advance_video_context* context, adv_c
 
 #ifdef USE_SMP
 	context->config.smp_flag = conf_bool_get_default(cfg_context, "misc_smp");
+	/* Disable SMP on kmsdrm (no window manager) as EGL contexts are thread-bound */
+	if (context->config.smp_flag && !target_wm()) {
+		log_std(("emu:video: disabling SMP on kmsdrm (EGL contexts are thread-bound)\n"));
+		context->config.smp_flag = 0;
+	}
 #else
 	context->config.smp_flag = 0;
 #endif

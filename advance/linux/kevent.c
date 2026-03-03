@@ -766,6 +766,13 @@ adv_error keyb_event_init(int keyb_id, adv_bool disable_special)
 		return -1;
 	}
 
+#if defined(USE_VIDEO_SDL)
+	if (os_internal_sdl_is_video_active()) {
+		error_set("The event keyboard driver cannot be used with the SDL video driver.\n");
+		return -1;
+	}
+#endif
+
 	for (i = 0; i < KEYB_MAX; ++i) {
 		event_state.map_up_to_low[i] = LOW_INVALID;
 	}

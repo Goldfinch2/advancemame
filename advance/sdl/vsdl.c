@@ -281,7 +281,7 @@ static adv_error sdl_init(int device_id, adv_output output, unsigned overlay_siz
 #endif
 
 #if defined(USE_VIDEO_FB)
-	if (os_internal_fb_is_video_active()) {
+	if (os_internal_fb_is_video_active() && target_wm()) {
 		error_set("Not compatible with FrameBuffer video.\n");
 		goto err;
 	}
@@ -289,8 +289,8 @@ static adv_error sdl_init(int device_id, adv_output output, unsigned overlay_siz
 
 #ifdef USE_VC
 	if (!target_wm()) {
-		error_set("With VideoCore you can use SDL only from a Window Manager.\n");
-		goto err;
+		/* Allow kmsdrm to work without a window manager on modern Pi OS */
+		log_std(("video:sdl: No window manager detected, allowing kmsdrm headless mode\n"));
 	}
 #endif
 
@@ -1248,6 +1248,9 @@ adv_error sdl_scroll(unsigned offset, adv_bool waitvsync)
 	waitvsync = waitvsync != 0;
 
 #if SDL_MAJOR_VERSION != 1
+	/* On kmsdrm (no window manager), always keep vsync on as page flipping is required */
+	if (!target_wm())
+		waitvsync = 1;
 	/* reset the renderer if the thread or the vsync request change */
 	if (
 #ifdef USE_SMP
@@ -1257,6 +1260,9 @@ adv_error sdl_scroll(unsigned offset, adv_bool waitvsync)
 	) {
 		log_std(("video:sdl: recompute renderer for thread/vsync change. New vsync=%d\n", waitvsync));
 		sdl_state.overlay_vsync = waitvsync;
+#ifdef USE_SMP
+		sdl_state.thread = pthread_self();
+#endif
 		sdl_overlay_set();
 	}
 

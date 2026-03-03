@@ -479,6 +479,15 @@ int os_inner_init(const char* title)
 	}
 #endif
 #if defined(USE_SDL)
+	if (getenv("DISPLAY") == 0 && getenv("WAYLAND_DISPLAY") == 0 && getenv("SDL_VIDEODRIVER") == 0) {
+		log_std(("os: No display server detected, setting SDL_VIDEODRIVER=kmsdrm\n"));
+		SDL_setenv("SDL_VIDEODRIVER", "kmsdrm", 1);
+		/* Use opengles2 renderer on kmsdrm as opengl may not render correctly */
+		if (getenv("SDL_RENDER_DRIVER") == 0) {
+			log_std(("os: Setting SDL_RENDER_DRIVER=opengles2 for kmsdrm\n"));
+			SDL_setenv("SDL_RENDER_DRIVER", "opengles2", 1);
+		}
+	}
 	log_std(("os: SDL_Init(SDL_INIT_NOPARACHUTE)\n"));
 	if (SDL_Init(SDL_INIT_NOPARACHUTE) != 0) {
 		log_std(("os: SDL_Init() failed, %s\n", SDL_GetError()));

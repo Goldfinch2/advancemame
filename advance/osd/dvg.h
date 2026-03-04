@@ -30,8 +30,10 @@
 #ifndef DVG_H
 #define DVG_H
 
-int dvg_init(const char *dvg_port, int sort_vectors);
+int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee);
 int dvg_open(void);
 void dvg_close(void);
+const char* dvg_get_marquee_path(void);
+int dvg_ui_is_active(void);
 
 #endif

@@ -51,6 +51,12 @@
 
 #include "SDL.h"
 
+#ifndef ADV_MENU
+#include <SDL_image.h>
+extern const char* dvg_get_marquee_path(void);
+extern int dvg_ui_is_active(void);
+#endif
+
 #ifdef USE_SMP
 #include <pthread.h>
 #endif
@@ -79,6 +85,9 @@ typedef struct sdl_internal_struct {
 	unsigned window_size_y;
 	SDL_Renderer* renderer; /**< Render. */
 	SDL_Texture* texture; /**< Texture */
+#ifndef ADV_MENU
+	SDL_Texture* marquee_texture; /**< Marquee texture for DVG mode */
+#endif
 #ifdef USE_SMP
 	pthread_t thread; /**< Main thread for renderer and texture */
 #endif
@@ -824,6 +833,32 @@ static adv_error sdl_overlay_set(void)
 	 */
 	sdl_state.thread = pthread_self();
 #endif
+
+#ifndef ADV_MENU
+	/* Load marquee texture if DVG mode has a marquee path */
+	if (sdl_state.marquee_texture) {
+		SDL_DestroyTexture(sdl_state.marquee_texture);
+		sdl_state.marquee_texture = 0;
+	}
+	{
+		const char* marquee_path = dvg_get_marquee_path();
+		if (marquee_path) {
+			SDL_Surface* surface = IMG_Load(marquee_path);
+			if (surface) {
+				sdl_state.marquee_texture = SDL_CreateTextureFromSurface(sdl_state.renderer, surface);
+				if (sdl_state.marquee_texture) {
+					log_std(("video:sdl: loaded marquee texture from '%s' (%dx%d)\n", marquee_path, surface->w, surface->h));
+				} else {
+					log_std(("ERROR:video:sdl: Failed to create marquee texture, %s\n", SDL_GetError()));
+				}
+				SDL_FreeSurface(surface);
+			} else {
+				log_std(("ERROR:video:sdl: Failed to load marquee '%s', %s\n", marquee_path, IMG_GetError()));
+			}
+		}
+	}
+#endif
+
 	return 0;
 }
 #endif
@@ -1109,6 +1144,12 @@ void sdl_mode_done(adv_bool restore)
 	free(sdl_state.overlay_alloc);
 	sdl_state.overlay_alloc = 0;
 	sdl_state.overlay_ptr = 0;
+#ifndef ADV_MENU
+	if (sdl_state.marquee_texture) {
+		SDL_DestroyTexture(sdl_state.marquee_texture);
+		sdl_state.marquee_texture = 0;
+	}
+#endif
 	if (sdl_state.texture) {
 		SDL_DestroyTexture(sdl_state.texture);
 		sdl_state.texture = 0;
@@ -1266,12 +1307,37 @@ adv_error sdl_scroll(unsigned offset, adv_bool waitvsync)
 		sdl_overlay_set();
 	}
 
-	if (SDL_UpdateTexture(sdl_state.texture, 0, sdl_state.overlay_ptr, sdl_state.overlay_pitch) != 0) {
-		log_std(("ERROR:video:sdl: Failed SDL_UpdateTexture(), %s\n", SDL_GetError()));
-	}
+#ifndef ADV_MENU
+	if (sdl_state.marquee_texture && !dvg_ui_is_active()) {
+		/* Render marquee scaled to fit with aspect ratio */
+		int tex_w, tex_h, win_w, win_h;
+		SDL_Rect dst;
+		float scale_x, scale_y, scale;
 
-	if (SDL_RenderCopy(sdl_state.renderer, sdl_state.texture, 0, 0) != 0) {
-		log_std(("ERROR:video:sdl: Failed SDL_RenderCopy(), %s\n", SDL_GetError()));
+		SDL_QueryTexture(sdl_state.marquee_texture, 0, 0, &tex_w, &tex_h);
+		SDL_GetWindowSize(sdl_state.window, &win_w, &win_h);
+
+		scale_x = (float)win_w / tex_w;
+		scale_y = (float)win_h / tex_h;
+		scale = (scale_x < scale_y) ? scale_x : scale_y;
+
+		dst.w = (int)(tex_w * scale);
+		dst.h = (int)(tex_h * scale);
+		dst.x = (win_w - dst.w) / 2;
+		dst.y = (win_h - dst.h) / 2;
+
+		SDL_RenderClear(sdl_state.renderer);
+		SDL_RenderCopy(sdl_state.renderer, sdl_state.marquee_texture, 0, &dst);
+	} else
+#endif
+	{
+		if (SDL_UpdateTexture(sdl_state.texture, 0, sdl_state.overlay_ptr, sdl_state.overlay_pitch) != 0) {
+			log_std(("ERROR:video:sdl: Failed SDL_UpdateTexture(), %s\n", SDL_GetError()));
+		}
+
+		if (SDL_RenderCopy(sdl_state.renderer, sdl_state.texture, 0, 0) != 0) {
+			log_std(("ERROR:video:sdl: Failed SDL_RenderCopy(), %s\n", SDL_GetError()));
+		}
 	}
 
 	SDL_RenderPresent(sdl_state.renderer);

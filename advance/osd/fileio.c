@@ -106,6 +106,14 @@ struct fileio_item* fileio_find(int type)
 	return i;
 }
 
+const char* fileio_dir_get(int type, unsigned index)
+{
+	struct fileio_item* i = fileio_find(type);
+	if (!i || index >= i->dir_mac)
+		return 0;
+	return i->dir_map[index];
+}
+
 /***************************************************************************/
 /* OSD interface */
 

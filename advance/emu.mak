@@ -62,7 +62,7 @@ ADVANCECFLAGS += \
 	-DUSE_KEYBOARD_SDL \
 	-DUSE_MOUSE_SDL \
 	-DUSE_JOYSTICK_SDL 
-ADVANCELIBS += $(SDLLIBS)
+ADVANCELIBS += $(SDLLIBS) -lSDL2_image
 ADVANCEOBJS += \
 	$(OBJ)/advance/sdl/ssdl.o \
 	$(OBJ)/advance/sdl/msdl.o \
@@ -295,7 +295,7 @@ ADVANCECFLAGS += \
 	-DUSE_KEYBOARD_SDL \
 	-DUSE_MOUSE_SDL \
 	-DUSE_JOYSTICK_SDL
-ADVANCELIBS += $(SDLLIBS)
+ADVANCELIBS += $(SDLLIBS) -lSDL2_image
 ADVANCEOBJS += \
 	$(OBJ)/advance/sdl/vsdl.o \
 	$(OBJ)/advance/sdl/ssdl.o \

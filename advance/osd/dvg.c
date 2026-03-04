@@ -50,6 +50,7 @@
 #include "driver.h"
 #include "vidhrdw/vector.h"
 #include "osdepend.h"
+#include "usrintrf.h"
 
 #include "jsmn.h"
 
@@ -135,6 +136,8 @@ static uint32_t  s_out_vec_cnt;
 static char      s_json_buf[512];
 static int       s_json_length;
 static uint32_t  s_vertical_display;
+static uint32_t  s_display_marquee;
+static char      s_marquee_path[FILE_MAXPATH];
 
 
 static game_info_t s_games[] = {
@@ -1397,29 +1400,94 @@ END:
 //
 // Init function
 //
-int dvg_init(const char *dvg_port, int sort_vectors)
+int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee)
 {
     s_init = 1;
     s_sort_vectors = sort_vectors;
+    s_display_marquee = display_marquee;
+    s_marquee_path[0] = 0;
     s_cmd_buf = (uint8_t *)malloc(CMD_BUF_SIZE * sizeof(uint8_t));
     s_in_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     s_out_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     strncpy(s_serial_dev, dvg_port, sizeof(s_serial_dev) - 1);
     s_serial_dev[sizeof(s_serial_dev) - 1] = 0;
-    log_std(("dvg: port is %s, sort_vectors %d\n", s_serial_dev, s_sort_vectors));
+    log_std(("dvg: port is %s, sort_vectors %d, display_marquee %d\n", s_serial_dev, s_sort_vectors, s_display_marquee));
     return 0;
 }
 
 //
 // Open the virtual serial port and register as a vector renderer to MAME.
 //
+static void dvg_find_marquee(void)
+{
+    int path_count, i;
+    const char *game_name;
+    const char *parent_name;
+    char filename[256];
+    extern const char* fileio_dir_get(int type, unsigned index);
+
+    s_marquee_path[0] = 0;
+
+    if (!s_display_marquee)
+        return;
+
+    game_name = Machine->gamedrv->name;
+    parent_name = Machine->gamedrv->parent;
+
+    path_count = osd_get_path_count(FILETYPE_ARTWORK);
+    log_std(("dvg: searching marquee for '%s' (parent '%s') in %d artwork dirs\n", game_name, parent_name ? parent_name : "none", path_count));
+
+    /* Try game name first */
+    snprintf(filename, sizeof(filename), "%s.png", game_name);
+    for (i = 0; i < path_count; ++i) {
+        if (osd_get_path_info(FILETYPE_ARTWORK, i, filename) == PATH_IS_FILE) {
+            const char* dir = fileio_dir_get(FILETYPE_ARTWORK, i);
+            if (dir) {
+                sncpy(s_marquee_path, sizeof(s_marquee_path), file_abs(dir, filename));
+                log_std(("dvg: found marquee at '%s'\n", s_marquee_path));
+                return;
+            }
+        }
+    }
+
+    /* Try parent name */
+    if (parent_name && strcmp(parent_name, "0") != 0) {
+        snprintf(filename, sizeof(filename), "%s.png", parent_name);
+        for (i = 0; i < path_count; ++i) {
+            if (osd_get_path_info(FILETYPE_ARTWORK, i, filename) == PATH_IS_FILE) {
+                const char* dir = fileio_dir_get(FILETYPE_ARTWORK, i);
+                if (dir) {
+                    sncpy(s_marquee_path, sizeof(s_marquee_path), file_abs(dir, filename));
+                    log_std(("dvg: found marquee (parent) at '%s'\n", s_marquee_path));
+                    return;
+                }
+            }
+        }
+    }
+
+    log_std(("dvg: no marquee found\n"));
+}
+
+const char* dvg_get_marquee_path(void)
+{
+    if (s_marquee_path[0])
+        return s_marquee_path;
+    return 0;
+}
+
+int dvg_ui_is_active(void)
+{
+    return ui_is_setup_active() || ui_is_onscrd_active();
+}
+
 int dvg_open()
 {
     if (s_init) {
-        log_std(("dvg: dvg_open()\n"));    
+        log_std(("dvg: dvg_open()\n"));
         s_first_call = 1;
         serial_open();
         vector_register_aux_renderer(dvg_update);
+        dvg_find_marquee();
     }
     return 0;
 }

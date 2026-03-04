@@ -1540,6 +1540,7 @@ adv_error advance_video_init(struct advance_video_context* context, adv_conf* cf
 	conf_string_register_default(cfg_context, "vector_aux_renderer", "none");
 	conf_string_register_default(cfg_context, "vector_aux_renderer_port", "/dev/ttyACM0");
 	conf_bool_register_default(cfg_context,   "vector_aux_renderer_sort_vectors", 0);
+	conf_bool_register_default(cfg_context,   "vector_aux_display_marquee", 1);
 
 #ifdef USE_SMP
 	/* SMP always enabled by default */
@@ -1750,8 +1751,9 @@ adv_error advance_video_config_load(struct advance_video_context* context, adv_c
         s = conf_string_get_default(cfg_context, "vector_aux_renderer");
 	if (strcmp(s, "dvg") == 0) {
 		int sort_vectors = conf_bool_get_default(cfg_context, "vector_aux_renderer_sort_vectors");
+		int display_marquee = conf_bool_get_default(cfg_context, "vector_aux_display_marquee");
 		s = conf_string_get_default(cfg_context, "vector_aux_renderer_port");
-		dvg_init(s, sort_vectors);
+		dvg_init(s, sort_vectors, display_marquee);
 	}
 #endif
 

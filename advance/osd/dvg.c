@@ -476,8 +476,8 @@ void sort_and_reconnect_vectors()
                     }
                 }
 
-                last_x = (bestReverse ? cx1 : cx1);
-                last_y = (bestReverse ? cy1 : cy1);
+                last_x = cx1;
+                last_y = cy1;
             }
         }
     }

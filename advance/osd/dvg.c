@@ -788,8 +788,10 @@ static int serial_close()
     s_cmd_buf[s_cmd_offs++] = cmd >>  0;
     serial_write(s_cmd_buf, s_cmd_offs);
 #ifdef __WIN32__
+    FlushFileBuffers((HANDLE)s_serial_fd);
     CloseHandle((HANDLE)s_serial_fd);
 #else
+    tcdrain(s_serial_fd);
     close(s_serial_fd);
 #endif
     result = 0;

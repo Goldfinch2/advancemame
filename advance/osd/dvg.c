@@ -1465,6 +1465,19 @@ static void dvg_find_marquee(void)
         }
     }
 
+    /* Try default */
+    snprintf(filename, sizeof(filename), "default.png");
+    for (i = 0; i < path_count; ++i) {
+        if (osd_get_path_info(FILETYPE_ARTWORK, i, filename) == PATH_IS_FILE) {
+            const char* dir = fileio_dir_get(FILETYPE_ARTWORK, i);
+            if (dir) {
+                sncpy(s_marquee_path, sizeof(s_marquee_path), file_abs(dir, filename));
+                log_std(("dvg: found marquee (default) at '%s'\n", s_marquee_path));
+                return;
+            }
+        }
+    }
+
     log_std(("dvg: no marquee found\n"));
 }
 

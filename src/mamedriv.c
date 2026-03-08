@@ -4597,6 +4597,7 @@ BOMULEUL CHAJARA SEGA ST-V  1997/04/11
 	DRIVER( bwidow )	/* 136017           (c) 1982 */
 	DRIVER( starwars )	/* 136021           (c) 1983 */
 	DRIVER( starwar1 )	/* 136021           (c) 1983 */
+	DRIVER( tomcatsw )	/* (proto)          (c) 1983 */
 	DRIVER( mhavoc )	/* 136025           (c) 1983 */
 	DRIVER( mhavoc2 )	/* 136025           (c) 1983 */
 	DRIVER( mhavocp )	/* 136025           (c) 1983 */
@@ -4605,6 +4606,7 @@ BOMULEUL CHAJARA SEGA ST-V  1997/04/11
 	DRIVER( alphaona )	/* (proto)          (c) 1983 */
 	DRIVER( mhavocpex7) /* 136025           (c) 2018 */
 	DRIVER( esb )		/* 136031           (c) 1985 */
+	DRIVER( tomcat )	/* (proto)          (c) 1985 */
 
 	/* Atari "Centipede hardware" games */
 	DRIVER( warlords )	/* 037153-037159    (c) 1980 */

@@ -172,7 +172,45 @@ static game_info_t s_games[] = {
     {"starcase", 0, GAME_NONE, 1},
     {"starwars", 1, GAME_NONE, 0},
     {"starwar1", 1, GAME_NONE, 0},
-    {"esb",      1, GAME_NONE, 0}
+    {"esb",      1, GAME_NONE, 0},
+    {"tomcat",   1, GAME_NONE, 0},
+    {"tomcatsw", 1, GAME_NONE, 0},
+    /* Asteroids clones/bootlegs */
+    {"asterock",  0, GAME_NONE, 1},
+    {"asteroib",  0, GAME_NONE, 1},
+    {"asteroidb", 0, GAME_NONE, 1},
+    /* Atari AVG color games */
+    {"tempest",   1, GAME_NONE, 0},
+    {"tempest1",  1, GAME_NONE, 0},
+    {"tempest2",  1, GAME_NONE, 0},
+    {"tempest3",  1, GAME_NONE, 0},
+    {"temptube",  1, GAME_NONE, 0},
+    {"gravitar",  1, GAME_NONE, 0},
+    {"gravitr2",  1, GAME_NONE, 0},
+    {"gravp",    1, GAME_NONE, 0},
+    {"mhavoc",   1, GAME_NONE, 0},
+    {"mhavoc2",  1, GAME_NONE, 0},
+    {"mhavocp",  1, GAME_NONE, 0},
+    {"mhavocrv", 1, GAME_NONE, 0},
+    {"mhavocpex7", 1, GAME_NONE, 0},
+    {"quantum",  1, GAME_NONE, 0},
+    {"quantum1", 1, GAME_NONE, 0},
+    {"quantump", 1, GAME_NONE, 0},
+    {"bwidow",   1, GAME_NONE, 0},
+    {"spacduel", 1, GAME_NONE, 0},
+    /* Centuri */
+    {"aztarac",  0, GAME_NONE, 0},
+    /* Sega vector games */
+    {"elim2",    0, GAME_NONE, 1},
+    {"elim4",    0, GAME_NONE, 1},
+    {"spacfury", 0, GAME_NONE, 1},
+    {"spacfura", 0, GAME_NONE, 1},
+    {"zektor",   0, GAME_NONE, 1},
+    {"tacscan",  0, GAME_NONE, 1},
+    {"startrek", 0, GAME_NONE, 1},
+    /* Cinematronics */
+    {"spcewarl", 0, GAME_NONE, 1},
+    {"spcewars", 0, GAME_NONE, 1},
 };
 
 

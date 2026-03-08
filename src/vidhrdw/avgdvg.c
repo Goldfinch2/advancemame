@@ -185,7 +185,7 @@ INLINE int effective_z(int z, int statz)
 {
 	/* Star Wars blends Z and an 8-bit STATZ */
 	/* STATZ of 128 should give highest intensity */
-	if (vector_engine == USE_AVG_SWARS)
+	if (vector_engine == USE_AVG_SWARS || vector_engine == USE_AVG_TOMCAT)
 	{
 		z = (z * statz) / (translucency ? 12 : 8);
 		if (z > 0xff)
@@ -702,7 +702,7 @@ static int avg_generate_vector_list(void)
 			case STAT:
 
 				/* Star Wars takes RGB directly and has an 8-bit brightness */
-				if (vector_engine == USE_AVG_SWARS)
+				if (vector_engine == USE_AVG_SWARS || vector_engine == USE_AVG_TOMCAT)
 				{
 					color = (firstwd >> 8) & 7;
 					statz = firstwd & 0xff;
@@ -1081,6 +1081,12 @@ VIDEO_START( avg_quantum )
 VIDEO_START( avg_redbaron )
 {
 	return avgdvg_init(USE_AVG_RBARON);
+}
+
+
+VIDEO_START( avg_tomcat )
+{
+	return avgdvg_init(USE_AVG_TOMCAT);
 }
 
 

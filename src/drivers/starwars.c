@@ -417,6 +417,34 @@ static MACHINE_DRIVER_START( starwars )
 MACHINE_DRIVER_END
 
 
+static MACHINE_DRIVER_START( tomcatsw )
+
+	/* basic machine hardware */
+	MDRV_CPU_ADD(M6809,1500000)
+	MDRV_CPU_PROGRAM_MAP(main_map,0)
+	MDRV_CPU_VBLANK_INT(irq0_line_assert,8)		/* 244Hz */
+
+	/* sound CPU disabled - no sound ROMs exist for tomcatsw */
+	MDRV_CPU_ADD(M6809,1500000)
+	MDRV_CPU_PROGRAM_MAP(sound_map,0)
+	MDRV_CPU_FLAGS(CPU_DISABLE)
+
+	MDRV_FRAMES_PER_SECOND(30)
+	MDRV_MACHINE_RESET(starwars)
+	MDRV_NVRAM_HANDLER(generic_0fill)
+
+	/* video hardware */
+	MDRV_VIDEO_ATTRIBUTES(VIDEO_TYPE_VECTOR | VIDEO_RGB_DIRECT)
+	MDRV_SCREEN_SIZE(400, 300)
+	MDRV_VISIBLE_AREA(0, 250, 0, 280)
+	MDRV_PALETTE_LENGTH(32768)
+
+	MDRV_PALETTE_INIT(avg_multi)
+	MDRV_VIDEO_START(avg_starwars)
+	MDRV_VIDEO_UPDATE(vector)
+MACHINE_DRIVER_END
+
+
 
 /*************************************
  *
@@ -508,6 +536,24 @@ ROM_START( esb )
 ROM_END
 
 
+ROM_START( tomcatsw )
+	ROM_REGION( 0x12000, REGION_CPU1, 0 )
+	ROM_LOAD( "tcavg3.1l",    0x3000, 0x1000, CRC(27188aa9) SHA1(5d9a978a7ac1913b57586e81045a1b955db27b48) ) /* vector rom */
+	ROM_LOAD( "tc6.1f",       0x6000, 0x2000, CRC(56e284ff) SHA1(a5fda9db0f6b8f7d28a4a607976fe978e62158cf) ) /* ROM 0 bank pages 0 and 1 */
+	ROM_CONTINUE(             0x10000, 0x2000 )
+	ROM_LOAD( "tc8.1hj",      0x8000, 0x2000, CRC(7b7575e3) SHA1(bdb838603ffb12195966d0ce454900253bc0f43f) )
+	ROM_LOAD( "tca.1jk",      0xa000, 0x2000, CRC(a1020331) SHA1(128745a2ec771ac818a8fbba59a08f0cf5f28e8f) )
+	ROM_LOAD( "tce.1m",       0xe000, 0x2000, CRC(4a3de8a3) SHA1(e48fc17201326358317f6b428e583ecaa3ecb881) )
+
+	/* Mathbox PROMs */
+	ROM_REGION( 0x1000, REGION_PROMS, ROMREGION_DISPOSE )
+	ROM_LOAD( "136021.110",   0x0000, 0x0400, CRC(810e040e) SHA1(d247cbb0afb4538d5161f8ce9eab337cdb3f2da4) ) /* PROM 0 */
+	ROM_LOAD( "136021.111",   0x0400, 0x0400, CRC(ae69881c) SHA1(f3420c6e15602956fd94982a5d8d4ddd015ed977) ) /* PROM 1 */
+	ROM_LOAD( "136021.112",   0x0800, 0x0400, CRC(ecf22628) SHA1(4dcf5153221feca329b8e8d199bd4fc00b151d9c) ) /* PROM 2 */
+	ROM_LOAD( "136021.113",   0x0c00, 0x0400, CRC(83febfde) SHA1(e13541b09d1724204fdb171528e9a1c83c799c1c) ) /* PROM 3 */
+ROM_END
+
+
 
 /*************************************
  *
@@ -571,4 +617,5 @@ static DRIVER_INIT( esb )
 
 GAME( 1983, starwars, 0,        starwars, starwars, starwars, ROT0, "Atari", "Star Wars (rev 2)", 0 )
 GAME( 1983, starwar1, starwars, starwars, starwars, starwars, ROT0, "Atari", "Star Wars (rev 1)", 0 )
+GAME( 1983, tomcatsw, 0,        tomcatsw, starwars, starwars, ROT0, "Atari", "TomCat (Star Wars hardware, prototype)", GAME_NO_SOUND )
 GAME( 1985, esb,      0,        starwars, esb,      esb,      ROT0, "Atari Games", "The Empire Strikes Back", 0 )

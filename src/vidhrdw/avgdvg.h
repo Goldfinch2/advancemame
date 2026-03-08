@@ -13,7 +13,8 @@
 #define USE_AVG_ALPHAONE    7
 #define USE_AVG_SWARS       8
 #define USE_AVG_QUANTUM     9
-#define AVGDVG_MAX          10
+#define USE_AVG_TOMCAT      10
+#define AVGDVG_MAX          11
 
 int avgdvg_done(void);
 WRITE8_HANDLER( avgdvg_go_w );
@@ -49,5 +50,6 @@ VIDEO_START( avg_starwars );
 VIDEO_START( avg_quantum );
 VIDEO_START( avg_bzone );
 VIDEO_START( avg_redbaron );
+VIDEO_START( avg_tomcat );
 
 #endif

@@ -46,7 +46,7 @@ void joystickb_default(void)
 
 void joystickb_reg(adv_conf* context, adv_bool auto_detect)
 {
-	conf_string_register_default(context, "device_joystick", auto_detect ? "auto" : "none");
+	conf_string_register_default(context, "device_joystick", auto_detect ? "sdl" : "none");
 }
 
 void joystickb_reg_driver(adv_conf* context, joystickb_driver* driver)

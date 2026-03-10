@@ -46,7 +46,7 @@ void keyb_default(void)
 
 void keyb_reg(adv_conf* context, adv_bool auto_detect)
 {
-	conf_string_register_default(context, "device_keyboard", auto_detect ? "auto" : "none");
+	conf_string_register_default(context, "device_keyboard", auto_detect ? "sdl" : "none");
 }
 
 void keyb_reg_driver(adv_conf* context, keyb_driver* driver)

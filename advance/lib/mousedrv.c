@@ -46,7 +46,7 @@ void mouseb_default(void)
 
 void mouseb_reg(adv_conf* context, adv_bool auto_detect)
 {
-	conf_string_register_default(context, "device_mouse", auto_detect ? "auto" : "none");
+	conf_string_register_default(context, "device_mouse", auto_detect ? "sdl" : "none");
 }
 
 void mouseb_reg_driver(adv_conf* context, mouseb_driver* driver)

@@ -201,13 +201,13 @@ static game_info_t s_games[] = {
     /* Centuri */
     {"aztarac",  0, GAME_NONE, 0},
     /* Sega vector games */
-    {"elim2",    0, GAME_NONE, 1},
-    {"elim4",    0, GAME_NONE, 1},
-    {"spacfury", 0, GAME_NONE, 1},
-    {"spacfura", 0, GAME_NONE, 1},
-    {"zektor",   0, GAME_NONE, 1},
-    {"tacscan",  0, GAME_NONE, 1},
-    {"startrek", 0, GAME_NONE, 1},
+    {"elim2",    0, GAME_NONE, 0},
+    {"elim4",    0, GAME_NONE, 0},
+    {"spacfury", 0, GAME_NONE, 0},
+    {"spacfura", 0, GAME_NONE, 0},
+    {"zektor",   0, GAME_NONE, 0},
+    {"tacscan",  0, GAME_NONE, 0},
+    {"startrek", 0, GAME_NONE, 0},
     /* Cinematronics */
     {"spcewarl", 0, GAME_NONE, 1},
     {"spcewars", 0, GAME_NONE, 1},

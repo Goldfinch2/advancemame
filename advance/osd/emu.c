@@ -38,6 +38,16 @@
 
 #include "advance.h"
 
+#include "audit.h"
+
+static void CLIB_DECL verifyroms_printf(const char *fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	target_out_va(fmt, arg);
+	va_end(arg);
+}
+
 struct advance_context CONTEXT;
 
 /***************************************************************************/
@@ -230,6 +240,7 @@ static void help(void)
 	target_out("%slog            create a log of operations\n", slash);
 	target_out("%slistxml        output the rom XML file\n", slash);
 	target_out("%slistbare       output the rom XML file removing info not required by frontends\n", slash);
+	target_out("%sverifyroms     verify rom files for a game, or all games if none specified\n", slash);
 	target_out("%srecord FILE    record an .inp file\n", slash);
 	target_out("%splayback FILE  play an .inp file\n", slash);
 	target_out("%sversion        print the version\n", slash);
@@ -631,6 +642,7 @@ int os_main(int argc, char* argv[])
 	const char* opt_cfg;
 	char* opt_gamename;
 	int opt_version;
+	int opt_verifyroms;
 	struct advance_context* context = &CONTEXT;
 	const char* section_map[32];
 	unsigned section_mac;
@@ -648,6 +660,7 @@ int os_main(int argc, char* argv[])
 	opt_remove = 0;
 	opt_version = 0;
 	opt_help = 0;
+	opt_verifyroms = 0;
 	opt_cfg = 0;
 
 	memset(&option, 0, sizeof(option));
@@ -719,6 +732,8 @@ int os_main(int argc, char* argv[])
 			opt_xml = 1;
 		} else if (target_option_compare(argv[i], "listbare")) {
 			opt_bare = 1;
+		} else if (target_option_compare(argv[i], "verifyroms")) {
+			opt_verifyroms = 1;
 		} else if (target_option_compare(argv[i], "record") && i + 1 < argc && argv[i + 1][0] != '-') {
 			if (strchr(argv[i + 1], '.') == 0)
 				snprintf(option.record_file_buffer, sizeof(option.record_file_buffer), "%s.inp", argv[i + 1]);
@@ -856,6 +871,80 @@ int os_main(int argc, char* argv[])
 	/* in the configuration */
 	section_map[0] = "";
 	conf_section_set(context->cfg, section_map, 1);
+
+	if (opt_verifyroms) {
+		int correct = 0;
+		int incorrect = 0;
+		int notfound = 0;
+		int total = 0;
+
+		if (advance_fileio_config_load(&context->fileio, context->cfg, &option) != 0)
+			goto err_os;
+
+		if (opt_gamename) {
+			/* verify a single game */
+			unsigned j;
+			int found = 0;
+			for (j = 0; mame_game_at(j); ++j) {
+				if (strcmp(opt_gamename, mame_game_name(mame_game_at(j))) == 0) {
+					int res = audit_verify_roms(j, verifyroms_printf);
+					switch (res) {
+					case CORRECT:
+					case BEST_AVAILABLE:
+						target_out("romset %s is good\n", opt_gamename);
+						break;
+					case INCORRECT:
+						target_out("romset %s is bad\n", opt_gamename);
+						break;
+					case NOTFOUND:
+						target_out("romset %s not found\n", opt_gamename);
+						break;
+					case CLONE_NOTFOUND:
+						target_out("romset %s not found (clone)\n", opt_gamename);
+						break;
+					case MISSING_OPTIONAL:
+						target_out("romset %s is good (missing optional files)\n", opt_gamename);
+						break;
+					}
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				target_err("Game \"%s\" isn't supported.\n", opt_gamename);
+				goto err_os;
+			}
+		} else {
+			/* verify all games */
+			unsigned j;
+			for (j = 0; mame_game_at(j); ++j) {
+				const char* name = mame_game_name(mame_game_at(j));
+				int res = audit_verify_roms(j, verifyroms_printf);
+				total++;
+				switch (res) {
+				case CORRECT:
+				case BEST_AVAILABLE:
+				case MISSING_OPTIONAL:
+					correct++;
+					break;
+				case INCORRECT:
+					target_out("romset %s is bad\n", name);
+					incorrect++;
+					break;
+				case NOTFOUND:
+					notfound++;
+					break;
+				case CLONE_NOTFOUND:
+					notfound++;
+					break;
+				}
+			}
+			target_out("\n%d romsets found, %d were OK.\n", correct + incorrect, correct);
+			if (incorrect > 0)
+				target_out("%d romsets had errors.\n", incorrect);
+		}
+		goto done_os;
+	}
 
 	if (!opt_gamename) {
 		if (!option.playback_file_buffer[0]) {

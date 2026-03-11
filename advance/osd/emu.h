@@ -68,7 +68,7 @@
 	"MAME - Copyright (C) 1997-2003 by Nicola Salmoria and the MAME Team\n"
 
 #define ADV_TITLE "AdvanceMESS"
-#define ADV_NAME "advmess"
+#define ADV_NAME "advmame"
 #define ADV_NAME_LEGACY "mess"
 
 #else

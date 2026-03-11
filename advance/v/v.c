@@ -222,7 +222,7 @@ static void menu_item_draw(int x, int y, int dx, int pos, adv_bool selected)
 
 		if (selected) {
 			if (crtc->user_flags & MODE_FLAGS_USER_BIT0) {
-				tag = 'þ';
+				tag = 'ï¿½';
 				color = COLOR_SELECTED_MARK;
 				color_n = color;
 			} else {
@@ -232,7 +232,7 @@ static void menu_item_draw(int x, int y, int dx, int pos, adv_bool selected)
 			}
 		} else {
 			if (crtc->user_flags & MODE_FLAGS_USER_BIT0) {
-				tag = 'þ';
+				tag = 'ï¿½';
 				if (crtc_is_fake(crtc) || crtc_clock_check(&the_monitor, crtc)) {
 					color = COLOR_MARK;
 					color_n = color;
@@ -1858,7 +1858,7 @@ int os_main(int argc, char* argv[])
 		case advance_vga: opt_rc = "vga.rc"; break;
 		case advance_menu: opt_rc = file_config_file_home("advmenu.rc"); break;
 		case advance_mame: opt_rc = file_config_file_home("advmame.rc"); break;
-		case advance_mess: opt_rc = file_config_file_home("advmess.rc"); break;
+		case advance_mess: opt_rc = file_config_file_home("advmame.rc"); break;
 		case advance_pac: opt_rc = file_config_file_home("advpac.rc"); break;
 		case advance_videow: opt_rc = file_config_file_home("videow.rc"); break;
 		default: opt_rc = "advv.rc"; break;

@@ -1851,7 +1851,7 @@ bool advmess::load_cfg(const game_set& gar, bool quiet)
 
 	string ref_dir_os = path_export(exe_dir_get());
 
-	string config_file = path_abs(path_import(file_config_file_home("advmess.rc")), exe_dir_get());
+	string config_file = path_abs(path_import(file_config_file_home("advmame.rc")), exe_dir_get());
 
 	context = conf_init();
 

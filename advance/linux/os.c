@@ -496,6 +496,8 @@ int os_inner_init(const char* title)
 	}
 	OS.sdl_active = 1;
 
+	SDL_ShowCursor(SDL_DISABLE);
+
 	SDL_VERSION(&compiled);
 	log_std(("os: compiled with sdl %d.%d.%d\n", compiled.major, compiled.minor, compiled.patch));
 #if SDL_MAJOR_VERSION == 1

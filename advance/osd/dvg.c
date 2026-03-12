@@ -137,6 +137,7 @@ static char      s_json_buf[512];
 static int       s_json_length;
 static uint32_t  s_vertical_display;
 static uint32_t  s_display_marquee;
+static uint32_t  s_marquee_display_mode;
 static char      s_marquee_path[FILE_MAXPATH];
 
 
@@ -1440,18 +1441,19 @@ END:
 //
 // Init function
 //
-int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee)
+int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee, int marquee_display_mode)
 {
     s_init = 1;
     s_sort_vectors = sort_vectors;
     s_display_marquee = display_marquee;
+    s_marquee_display_mode = marquee_display_mode;
     s_marquee_path[0] = 0;
     s_cmd_buf = (uint8_t *)malloc(CMD_BUF_SIZE * sizeof(uint8_t));
     s_in_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     s_out_vec_list = (vector_t *)malloc(MAX_VECTORS * sizeof(vector_t));
     strncpy(s_serial_dev, dvg_port, sizeof(s_serial_dev) - 1);
     s_serial_dev[sizeof(s_serial_dev) - 1] = 0;
-    log_std(("dvg: port is %s, sort_vectors %d, display_marquee %d\n", s_serial_dev, s_sort_vectors, s_display_marquee));
+    log_std(("dvg: port is %s, sort_vectors %d, display_marquee %d, marquee_mode %d\n", s_serial_dev, s_sort_vectors, s_display_marquee, s_marquee_display_mode));
     return 0;
 }
 
@@ -1526,6 +1528,11 @@ const char* dvg_get_marquee_path(void)
     if (s_marquee_path[0])
         return s_marquee_path;
     return 0;
+}
+
+int dvg_get_marquee_display_mode(void)
+{
+    return s_marquee_display_mode;
 }
 
 int dvg_ui_is_active(void)

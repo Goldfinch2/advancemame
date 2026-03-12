@@ -30,10 +30,15 @@
 #ifndef DVG_H
 #define DVG_H
 
-int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee);
+#define MARQUEE_MODE_FIT     0
+#define MARQUEE_MODE_STRETCH 1
+#define MARQUEE_MODE_ZOOM    2
+
+int dvg_init(const char *dvg_port, int sort_vectors, int display_marquee, int marquee_display_mode);
 int dvg_open(void);
 void dvg_close(void);
 const char* dvg_get_marquee_path(void);
+int dvg_get_marquee_display_mode(void);
 int dvg_ui_is_active(void);
 
 #endif

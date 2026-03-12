@@ -54,7 +54,12 @@
 #ifndef ADV_MENU
 #include <SDL_image.h>
 extern const char* dvg_get_marquee_path(void);
+extern int dvg_get_marquee_display_mode(void);
 extern int dvg_ui_is_active(void);
+
+#define MARQUEE_MODE_FIT     0
+#define MARQUEE_MODE_STRETCH 1
+#define MARQUEE_MODE_ZOOM    2
 #endif
 
 #ifdef USE_SMP
@@ -1309,25 +1314,42 @@ adv_error sdl_scroll(unsigned offset, adv_bool waitvsync)
 
 #ifndef ADV_MENU
 	if (sdl_state.marquee_texture && !dvg_ui_is_active()) {
-		/* Render marquee scaled to fit with aspect ratio */
 		int tex_w, tex_h, win_w, win_h;
-		SDL_Rect dst;
-		float scale_x, scale_y, scale;
+		int mode = dvg_get_marquee_display_mode();
 
 		SDL_QueryTexture(sdl_state.marquee_texture, 0, 0, &tex_w, &tex_h);
 		SDL_GetWindowSize(sdl_state.window, &win_w, &win_h);
 
-		scale_x = (float)win_w / tex_w;
-		scale_y = (float)win_h / tex_h;
-		scale = (scale_x < scale_y) ? scale_x : scale_y;
-
-		dst.w = (int)(tex_w * scale);
-		dst.h = (int)(tex_h * scale);
-		dst.x = (win_w - dst.w) / 2;
-		dst.y = (win_h - dst.h) / 2;
-
 		SDL_RenderClear(sdl_state.renderer);
-		SDL_RenderCopy(sdl_state.renderer, sdl_state.marquee_texture, 0, &dst);
+
+		if (mode == MARQUEE_MODE_STRETCH) {
+			/* Stretch to fill entire window, ignoring aspect ratio */
+			SDL_RenderCopy(sdl_state.renderer, sdl_state.marquee_texture, 0, 0);
+		} else if (mode == MARQUEE_MODE_ZOOM) {
+			/* Zoom to fill window, preserving aspect ratio, cropping excess */
+			SDL_Rect src;
+			float scale_x = (float)win_w / tex_w;
+			float scale_y = (float)win_h / tex_h;
+			float scale = (scale_x > scale_y) ? scale_x : scale_y;
+			int vis_w = (int)(win_w / scale);
+			int vis_h = (int)(win_h / scale);
+			src.x = (tex_w - vis_w) / 2;
+			src.y = (tex_h - vis_h) / 2;
+			src.w = vis_w;
+			src.h = vis_h;
+			SDL_RenderCopy(sdl_state.renderer, sdl_state.marquee_texture, &src, 0);
+		} else {
+			/* Fit: scale to fit window, preserving aspect ratio, letterboxed */
+			SDL_Rect dst;
+			float scale_x = (float)win_w / tex_w;
+			float scale_y = (float)win_h / tex_h;
+			float scale = (scale_x < scale_y) ? scale_x : scale_y;
+			dst.w = (int)(tex_w * scale);
+			dst.h = (int)(tex_h * scale);
+			dst.x = (win_w - dst.w) / 2;
+			dst.y = (win_h - dst.h) / 2;
+			SDL_RenderCopy(sdl_state.renderer, sdl_state.marquee_texture, 0, &dst);
+		}
 	} else
 #endif
 	{

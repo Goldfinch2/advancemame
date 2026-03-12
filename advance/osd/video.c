@@ -1541,6 +1541,7 @@ adv_error advance_video_init(struct advance_video_context* context, adv_conf* cf
 	conf_string_register_default(cfg_context, "vector_aux_renderer_port", "/dev/ttyACM0");
 	conf_bool_register_default(cfg_context,   "vector_aux_renderer_sort_vectors", 0);
 	conf_bool_register_default(cfg_context,   "vector_aux_display_marquee", 1);
+	conf_string_register_default(cfg_context, "vector_aux_marquee_display_mode", "fit");
 
 #ifdef USE_SMP
 	/* SMP always enabled by default */
@@ -1752,8 +1753,14 @@ adv_error advance_video_config_load(struct advance_video_context* context, adv_c
 	if (strcmp(s, "dvg") == 0) {
 		int sort_vectors = conf_bool_get_default(cfg_context, "vector_aux_renderer_sort_vectors");
 		int display_marquee = conf_bool_get_default(cfg_context, "vector_aux_display_marquee");
+		int marquee_mode = MARQUEE_MODE_FIT;
+		const char* mode_str = conf_string_get_default(cfg_context, "vector_aux_marquee_display_mode");
+		if (strcmp(mode_str, "stretch") == 0)
+			marquee_mode = MARQUEE_MODE_STRETCH;
+		else if (strcmp(mode_str, "zoom") == 0)
+			marquee_mode = MARQUEE_MODE_ZOOM;
 		s = conf_string_get_default(cfg_context, "vector_aux_renderer_port");
-		dvg_init(s, sort_vectors, display_marquee);
+		dvg_init(s, sort_vectors, display_marquee, marquee_mode);
 	}
 #endif
 

@@ -45,6 +45,26 @@
 #include "oswin.h"
 #endif
 
+#ifdef __linux__
+#include "event.h"
+#include <linux/input.h>
+
+#define SDL_LED_DEVICE_MAX 8
+
+struct sdl_led_device {
+	int fe;
+	unsigned led_state;
+};
+
+static struct {
+	unsigned mac;
+	struct sdl_led_device map[SDL_LED_DEVICE_MAX];
+} sdl_led_state;
+
+static void keyb_sdl_led_init(void);
+static void keyb_sdl_led_done(void);
+#endif
+
 #define LOW_INVALID ((unsigned)0xFFFFFFFF)
 
 #if SDL_MAJOR_VERSION == 1
@@ -320,12 +340,20 @@ adv_error keyb_sdl_init(int keyb_id, adv_bool disable_special)
 	}
 #endif
 
+#ifdef __linux__
+	keyb_sdl_led_init();
+#endif
+
 	return 0;
 }
 
 void keyb_sdl_done(void)
 {
 	log_std(("keyb:sdl: keyb_sdl_done()\n"));
+
+#ifdef __linux__
+	keyb_sdl_led_done();
+#endif
 
 #ifdef __WIN32__
 	// called uncoditionally, the internal logic take care of it
@@ -439,6 +467,107 @@ void keyb_sdl_event_release_all(void)
 }
 
 /***************************************************************************/
+/* LED support via /dev/input/event* on Linux */
+
+#ifdef __linux__
+static void keyb_sdl_led_init(void)
+{
+	struct event_location loc_map[SDL_LED_DEVICE_MAX];
+	unsigned mac, i;
+	adv_bool eacces = 0;
+
+	sdl_led_state.mac = 0;
+
+	mac = event_locate(loc_map, SDL_LED_DEVICE_MAX, "event", &eacces);
+
+	for (i = 0; i < mac; ++i) {
+		unsigned char evtype_bitmask[EV_MAX / 8 + 1];
+		int f;
+
+		if (sdl_led_state.mac >= SDL_LED_DEVICE_MAX)
+			break;
+
+		f = event_open(loc_map[i].file, evtype_bitmask, sizeof(evtype_bitmask));
+		if (f == -1)
+			continue;
+
+		if (!event_is_keyboard(f, evtype_bitmask)) {
+			event_close(f);
+			continue;
+		}
+
+		if (!event_test_bit(EV_LED, evtype_bitmask)) {
+			log_std(("keyb:sdl: no LED support on device %s\n", loc_map[i].file));
+			event_close(f);
+			continue;
+		}
+
+		log_std(("keyb:sdl: opened %s for LED output\n", loc_map[i].file));
+		sdl_led_state.map[sdl_led_state.mac].fe = f;
+		sdl_led_state.map[sdl_led_state.mac].led_state = 0;
+		++sdl_led_state.mac;
+	}
+
+	log_std(("keyb:sdl: %d LED device(s) found\n", sdl_led_state.mac));
+}
+
+static void keyb_sdl_led_done(void)
+{
+	unsigned i;
+	for (i = 0; i < sdl_led_state.mac; ++i)
+		event_close(sdl_led_state.map[i].fe);
+	sdl_led_state.mac = 0;
+}
+
+static void keyb_sdl_led_set(unsigned keyboard, unsigned led_mask)
+{
+	unsigned i;
+
+	log_debug(("keyb:sdl: keyb_sdl_led_set(keyboard:%d,mask:%d)\n", keyboard, led_mask));
+
+	for (i = 0; i < sdl_led_state.mac; ++i) {
+		unsigned led_state = sdl_led_state.map[i].led_state;
+		int f = sdl_led_state.map[i].fe;
+
+#define led_update(idx, k) \
+	do { \
+		if (((led_mask ^ led_state) & k) != 0) \
+			event_write(f, EV_LED, idx, (led_mask & k) != 0); \
+	} while (0)
+
+#ifdef LED_NUML
+		led_update(LED_NUML, KEYB_LED_NUML);
+#endif
+#ifdef LED_CAPSL
+		led_update(LED_CAPSL, KEYB_LED_CAPSL);
+#endif
+#ifdef LED_SCROLLL
+		led_update(LED_SCROLLL, KEYB_LED_SCROLLL);
+#endif
+#ifdef LED_COMPOSE
+		led_update(LED_COMPOSE, KEYB_LED_COMPOSE);
+#endif
+#ifdef LED_KANA
+		led_update(LED_KANA, KEYB_LED_KANA);
+#endif
+#ifdef LED_SLEEP
+		led_update(LED_SLEEP, KEYB_LED_SLEEP);
+#endif
+#ifdef LED_SUSPEND
+		led_update(LED_SUSPEND, KEYB_LED_SUSPEND);
+#endif
+#ifdef LED_MUTE
+		led_update(LED_MUTE, KEYB_LED_MUTE);
+#endif
+
+#undef led_update
+
+		sdl_led_state.map[i].led_state = led_mask;
+	}
+}
+#endif
+
+/***************************************************************************/
 /* Driver */
 
 keyb_driver keyb_sdl_driver = {
@@ -455,7 +584,11 @@ keyb_driver keyb_sdl_driver = {
 	keyb_sdl_has,
 	keyb_sdl_get,
 	keyb_sdl_all_get,
+#ifdef __linux__
+	keyb_sdl_led_set,
+#else
 	0,
+#endif
 	keyb_sdl_poll
 };
 

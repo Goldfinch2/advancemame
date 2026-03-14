@@ -113,7 +113,11 @@ void script_port_write(int address, unsigned char value)
 				}
 			}
 
-			keyb_led_set(0, led_mask);
+			{
+				unsigned k;
+				for (k = 0; k < keyb_count_get(); ++k)
+					keyb_led_set(k, led_mask);
+			}
 
 			STATE.kdb_state = value;
 		}
